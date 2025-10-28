@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    // "baseUrl": "./src",
+    // "paths": {
+    //   "@core/*": ["core/*"],
+    //   "@infrastructure/*": ["infrastructure/*"],
+    //   "@presentation/*": ["presentation/*"],
+    //   "@config/*": ["config/*"],
+    //   "@tests/*": ["../tests/*"]
+    // },
+    "types": ["jest", "node"]
+    // "emitDecoratorMetadata": true,
+    // "experimentalDecorators": true
+  },
+  "include": ["src/**/*", "tests/**/*", "prisma/**/*", "prisma.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}
