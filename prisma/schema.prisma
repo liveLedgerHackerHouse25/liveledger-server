@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String         @id @default(cuid())
+  walletAddress  String         @unique
+  email          String?
+  name           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  payerStreams   Stream[]       @relation("PayerStreams")
+  recipientStreams Stream[]     @relation("RecipientStreams")
+  transactions   Transaction[]
+  balances       Balance[]
+
+  @@index([walletAddress])
+}
+
+model Stream {
+  id             String         @id @default(cuid())
+  payerId        String
+  recipientId    String
+  tokenAddress   String
+  flowRate       String         // BigNumber as string (tokens per second)
+  totalAmount    String         // BigNumber as string (maximum total amount)
+  withdrawnAmount String        @default("0") // BigNumber as string
+  status         StreamStatus   @default(ACTIVE)
+  startTime      DateTime       @default(now())
+  endTime        DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  payer          User           @relation("PayerStreams", fields: [payerId], references: [id], onDelete: Cascade)
+  recipient      User           @relation("RecipientStreams", fields: [recipientId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+
+  @@index([payerId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([startTime])
+}
+
+model Transaction {
+  id             String           @id @default(cuid())
+  streamId       String?
+  type           TransactionType
+  amount         String           // BigNumber as string
+  txHash         String?          @unique
+  status         TransactionStatus @default(PENDING)
+  fromAddress    String
+  toAddress      String
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+
+  // Relations
+  stream         Stream?          @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [fromAddress], references: [walletAddress], onDelete: Cascade)
+
+  @@index([streamId])
+  @@index([txHash])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Balance {
+  id             String         @id @default(cuid())
+  userId         String
+  tokenAddress   String
+  totalEarned    String         @default("0") // BigNumber as string
+  totalWithdrawn String         @default("0") // BigNumber as string
+  availableBalance String       @default("0") // BigNumber as string
+  lastUpdated    DateTime       @updatedAt
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tokenAddress])
+  @@index([userId])
+  @@index([tokenAddress])
+}
+
+enum StreamStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+  COMPLETED
+}
+
+enum TransactionType {
+  STREAM_START
+  STREAM_STOP
+  WITHDRAWAL
+  DEPOSIT
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
