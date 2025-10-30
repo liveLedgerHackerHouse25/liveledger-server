@@ -36,6 +36,7 @@ model Stream {
   totalAmount    String         // BigNumber as string (maximum total amount)
   withdrawnAmount String        @default("0") // BigNumber as string
   status         StreamStatus   @default(ACTIVE)
+  escrowConfirmed Boolean      @default(false)
   startTime      DateTime       @default(now())
   endTime        DateTime?
   createdAt      DateTime       @default(now())
@@ -92,6 +93,7 @@ model Balance {
 }
 
 enum StreamStatus {
+  PENDING
   ACTIVE
   PAUSED
   STOPPED
@@ -99,6 +101,7 @@ enum StreamStatus {
 }
 
 enum TransactionType {
+  ESCROW_DEPOSIT
   STREAM_START
   STREAM_STOP
   WITHDRAWAL

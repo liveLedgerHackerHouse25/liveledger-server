@@ -1,12 +1,18 @@
 import { prisma } from "../utils/database";
 import { IUser, IUserCreate } from "../types/user.types";
-import { NotFoundError, ConflictError, ValidationError } from "../errors/genericErrors";
+import {
+  NotFoundError,
+  ConflictError,
+  ValidationError,
+} from "../errors/genericErrors";
 import jwt from "jsonwebtoken";
+import "dotenv/config";
 
 export class UserService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+  private readonly JWT_SECRET = process.env.JWT_SECRET || "secret-key";
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-  private readonly REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
+  private readonly REFRESH_TOKEN_EXPIRES_IN =
+    process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
 
   /**
    * Get user by ID
@@ -70,7 +76,10 @@ export class UserService {
   /**
    * Update user profile
    */
-  async updateUserProfile(userId: string, updateData: Partial<IUserCreate>): Promise<IUser> {
+  async updateUserProfile(
+    userId: string,
+    updateData: Partial<IUserCreate>
+  ): Promise<IUser> {
     // Validate email if provided
     if (updateData.email && !this.isValidEmail(updateData.email)) {
       throw new ValidationError("Invalid email format");
@@ -118,7 +127,9 @@ export class UserService {
   /**
    * Refresh JWT token
    */
-  async refreshToken(refreshToken: string): Promise<{ token: string; user: IUser }> {
+  async refreshToken(
+    refreshToken: string
+  ): Promise<{ token: string; user: IUser }> {
     try {
       // Verify refresh token
       const payload = jwt.verify(refreshToken, this.JWT_SECRET) as any;

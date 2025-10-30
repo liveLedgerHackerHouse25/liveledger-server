@@ -21,8 +21,11 @@ export interface IWalletAuthResponse {
     walletAddress: string;
     email?: string;
     name?: string;
+    // type: string;
   };
 }
+
+export type UserType = "PAYER" | "RECIPIENT";
 
 export interface IJwtPayload {
   userId: string;

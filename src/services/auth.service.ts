@@ -148,6 +148,7 @@ export class AuthService {
         walletAddress: user.walletAddress,
         email: user.email || undefined,
         name: user.name || undefined,
+        // type: user.type,
       },
     };
   }

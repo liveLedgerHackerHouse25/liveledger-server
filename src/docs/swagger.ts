@@ -440,7 +440,6 @@ const swaggerUiOptions = {
     }
   `,
   customSiteTitle: "LiveLedger API Documentation",
-  customfavIcon: "/favicon.ico",
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
