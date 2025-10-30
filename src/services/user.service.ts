@@ -27,6 +27,7 @@ export class UserService {
         name: true,
         createdAt: true,
         updatedAt: true,
+        type: true,
       },
     });
 
@@ -39,6 +40,7 @@ export class UserService {
       ...user,
       email: user.email || undefined,
       name: user.name || undefined,
+      type: user.type || "RECIPIENT",
     };
   }
 
@@ -58,6 +60,7 @@ export class UserService {
         name: true,
         createdAt: true,
         updatedAt: true,
+        type: true,
       },
     });
 
@@ -70,6 +73,7 @@ export class UserService {
       ...user,
       email: user.email || undefined,
       name: user.name || undefined,
+      type: user.type,
     };
   }
 
@@ -105,6 +109,7 @@ export class UserService {
         email: updateData.email,
         name: updateData.name,
         updatedAt: new Date(),
+        type: updateData.type,
       },
       select: {
         id: true,
@@ -113,6 +118,7 @@ export class UserService {
         name: true,
         createdAt: true,
         updatedAt: true,
+        type: true,
       },
     });
 
@@ -121,6 +127,7 @@ export class UserService {
       ...user,
       email: user.email || undefined,
       name: user.name || undefined,
+      type: user.type,
     };
   }
 

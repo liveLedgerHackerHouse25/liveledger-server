@@ -23,6 +23,7 @@ describe("User API", () => {
         walletAddress: "0x1234567890123456789012345678901234567890",
         email: "test@example.com",
         name: "Test User",
+        type: "PAYER",
       },
     });
 
@@ -57,7 +58,6 @@ describe("User API", () => {
       const response = await request(app)
         .get("/api/users/profile")
         .set("Authorization", `Bearer ${authToken}`);
-
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.user).toBeDefined();
@@ -67,6 +67,7 @@ describe("User API", () => {
       );
       expect(response.body.data.user.email).toBe(testUser.email);
       expect(response.body.data.user.name).toBe(testUser.name);
+      expect(response.body.data.user.type).toBe(testUser.type);
     });
 
     it("should return 401 without authentication", async () => {
@@ -89,6 +90,7 @@ describe("User API", () => {
       const updateData = {
         email: "updated@example.com",
         name: "Updated Name",
+        type: "PAYER",
       };
 
       const response = await request(app)
@@ -100,6 +102,7 @@ describe("User API", () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data.user.email).toBe(updateData.email);
       expect(response.body.data.user.name).toBe(updateData.name);
+      expect(response.body.data.user.type).toBe(updateData.type);
 
       // Verify update in database
       const updatedUser = await prisma.user.findUnique({
@@ -107,6 +110,7 @@ describe("User API", () => {
       });
       expect(updatedUser?.email).toBe(updateData.email);
       expect(updatedUser?.name).toBe(updateData.name);
+      expect(updatedUser?.type).toBe(updateData.type);
     });
 
     it("should update only email", async () => {

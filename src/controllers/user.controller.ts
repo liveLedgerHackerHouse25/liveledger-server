@@ -44,10 +44,10 @@ export class UserController {
       const userId = req.user.id;
       const updateData: Partial<IUserCreate> = req.body;
 
-      // Only allow updating email and name
       const allowedUpdates = {
         email: updateData.email,
         name: updateData.name,
+        type: updateData.type,
       };
 
       const user = await this.userService.updateUserProfile(

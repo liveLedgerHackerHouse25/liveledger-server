@@ -185,58 +185,55 @@ describe("Authentication API", () => {
     });
   });
 
-  // describe('GET /api/auth/me', () => {
-  //   it('should return current user info with valid token', async () => {
-  //     // First authenticate
-  //     const nonceResponse = await request(app)
-  //       .post('/api/auth/nonce')
-  //       .send({
-  //         walletAddress: testWallet.address
-  //       });
+  describe("GET /api/auth/me", () => {
+    it("should return current user info with valid token", async () => {
+      // First authenticate
+      const nonceResponse = await request(app).post("/api/auth/nonce").send({
+        walletAddress: testWallet.address,
+      });
 
-  //     const { nonce } = nonceResponse.body.data;
-  //     const message = `Welcome to LiveLedger!\n\nSign this message to authenticate your wallet.\n\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
-  //     const signature = await testWallet.signMessage(message);
+      const { nonce } = nonceResponse.body.data;
+      const message = `Welcome to LiveLedger!\n\nSign this message to authenticate your wallet.\n\nNonce: ${nonce}\n\nThis request will not trigger a blockchain transaction or cost any gas fees.`;
+      const signature = await testWallet.signMessage(message);
 
-  //     const authResponse = await request(app)
-  //       .post('/api/auth/wallet')
-  //       .send({
-  //         walletAddress: testWallet.address,
-  //         signature,
-  //         nonce
-  //       });
+      const authResponse = await request(app).post("/api/auth/wallet").send({
+        walletAddress: testWallet.address,
+        signature,
+        nonce,
+      });
 
-  //     const { token } = authResponse.body.data;
+      const { token } = authResponse.body.data;
 
-  //     // Get user info
-  //     const meResponse = await request(app)
-  //       .get('/api/auth/me')
-  //       .set('Authorization', `Bearer ${token}`);
+      // Get user info
+      const meResponse = await request(app)
+        .get("/api/auth/me")
+        .set("Authorization", `Bearer ${token}`);
 
-  //     expect(meResponse.status).toBe(200);
-  //     expect(meResponse.body.success).toBe(true);
-  //     expect(meResponse.body.data.user).toBeDefined();
-  //     expect(meResponse.body.data.user.walletAddress).toBe(testWallet.address.toLowerCase());
-  //     expect(meResponse.body.data.user.id).toBeDefined();
-  //   });
+      expect(meResponse.status).toBe(200);
+      expect(meResponse.body.success).toBe(true);
+      expect(meResponse.body.data.user).toBeDefined();
+      expect(meResponse.body.data.user.walletAddress).toBe(testWallet.address);
+      expect(meResponse.body.data.user.id).toBeDefined();
+      console.log(meResponse.body);
+      expect(meResponse.body.data.user.type).toEqual("RECIPIENT");
+    });
 
-  //   it('should return error without token', async () => {
-  //     const response = await request(app)
-  //       .get('/api/auth/me');
+    it("should return error without token", async () => {
+      const response = await request(app).get("/api/auth/me");
 
-  //     expect(response.status).toBe(401);
-  //     expect(response.body.success).toBe(false);
-  //     expect(response.body.error.message).toContain('No token provided');
-  //   });
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.message).toContain("No token provided");
+    });
 
-  //   it('should return error with invalid token', async () => {
-  //     const response = await request(app)
-  //       .get('/api/auth/me')
-  //       .set('Authorization', 'Bearer invalid-token');
+    it("should return error with invalid token", async () => {
+      const response = await request(app)
+        .get("/api/auth/me")
+        .set("Authorization", "Bearer invalid-token");
 
-  //     expect(response.status).toBe(401);
-  //     expect(response.body.success).toBe(false);
-  //     expect(response.body.error.message).toContain('Invalid or expired token');
-  //   });
-  // });
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.message).toContain("Invalid or expired token");
+    });
+  });
 });

@@ -21,7 +21,7 @@ export interface IWalletAuthResponse {
     walletAddress: string;
     email?: string;
     name?: string;
-    // type: string;
+    type?: UserType;
   };
 }
 
@@ -37,4 +37,5 @@ export interface IAuthUser {
   walletAddress: string;
   email?: string;
   name?: string;
+  type?: UserType;
 }

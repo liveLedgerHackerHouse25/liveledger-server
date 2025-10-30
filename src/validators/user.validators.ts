@@ -35,6 +35,10 @@ export const UserValidators = {
       .isLength({ min: 1, max: 100 })
       .withMessage("Name must be between 1 and 100 characters")
       .trim(),
+    body("type")
+      .optional()
+      .isIn(["PAYER", "RECIPIENT"])
+      .withMessage("Type must be either PAYER or RECIPIENT"),
   ],
 
   /**
