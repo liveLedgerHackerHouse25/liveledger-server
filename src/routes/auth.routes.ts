@@ -107,6 +107,10 @@ router.post(
  *                       type: string
  *                       description: JWT token for authenticated requests
  *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                     refreshToken:
+ *                       type: string
+ *                       description: Refresh token for obtaining new access tokens
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *                     user:
  *                       type: object
  *                       properties:

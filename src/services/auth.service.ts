@@ -13,11 +13,17 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "../errors/genericErrors";
+import { UserService } from "./user.service";
 
 export class AuthService {
   private readonly JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
   private readonly JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
   private readonly NONCE_EXPIRES_IN = 5 * 60 * 1000; // 5 minutes
+  private userService: UserService;
+
+  constructor() {
+    this.userService = new UserService();
+  }
 
   /**
    * Generate a nonce for wallet authentication
@@ -131,8 +137,12 @@ export class AuthService {
       expiresIn: this.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
 
+    // Generate refresh token
+    const refreshToken = this.userService.generateRefreshToken(user.id);
+
     return {
       token,
+      refreshToken,
       user: {
         id: user.id,
         walletAddress: user.walletAddress,

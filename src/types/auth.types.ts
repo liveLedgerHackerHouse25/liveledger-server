@@ -15,6 +15,7 @@ export interface IWalletAuthRequest {
 
 export interface IWalletAuthResponse {
   token: string;
+  refreshToken: string;
   user: {
     id: string;
     walletAddress: string;
