@@ -25,14 +25,15 @@ const app: Application = express();
 
 // Security middleware
 app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
-      "http://localhost:3000",
-    ],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
+//       "http://localhost:3000",
+//     ],
+//     credentials: true,
+//   })
+// );
+app.use(cors());
 
 // Body parsing middleware
 app.use(compression());

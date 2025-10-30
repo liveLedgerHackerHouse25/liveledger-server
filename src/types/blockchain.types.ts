@@ -1,30 +1,71 @@
-export type TransactionType = "STREAM_START" | "STREAM_STOP" | "WITHDRAWAL" | "DEPOSIT";
+// src/types/blockchain.types.ts
+import { BigNumberish } from "ethers";
 
-export type TransactionStatus = "PENDING" | "CONFIRMED" | "FAILED";
+export interface PreparedTransaction {
+  to: string;
+  data: string;
+  value: string;
+  gasLimit: string;
+  chainId: number;
+}
 
-export interface IBlockchainTransaction {
-  hash: string;
+export interface EscrowDepositParams {
+  payerAddress: string;
+  amount: string;
+  streamId: string;
+  tokenAddress: string;
+}
+
+export interface EscrowWithdrawalParams {
+  streamId: string;
+  recipientAddress: string;
+  amount: string;
+}
+
+export interface TransactionReceipt {
+  transactionHash: string;
+  status: number;
+  gasUsed: string;
+  blockNumber: number;
+}
+
+export interface EscrowEvent {
+  streamId: string;
   from: string;
   to: string;
-  value: string;
-  gasPrice?: string;
-  gasLimit?: string;
-  data?: string;
-  nonce?: number;
+  amount: string;
+  transactionHash: string;
+  blockNumber: number;
 }
 
-export interface IEscrowDeposit {
-  streamId: string;
+export interface CreateStreamParams {
   payerAddress: string;
-  recipientAddress: string;
-  tokenAddress: string;
-  amount: string;
-  txHash: string;
+  recipient: string;
+  token: string;
+  totalAmount: string;
+  ratePerSecond: string;
+  duration: number; // in seconds
+  maxWithdrawalsPerDay: number;
 }
 
-export interface IWithdrawalRequest {
-  streamId: string;
-  amount: string;
+export interface WithdrawParams {
   recipientAddress: string;
-  tokenAddress: string;
+  streamId: number; // Changed from string to number
+}
+
+export interface CancelStreamParams {
+  payerAddress: string;
+  streamId: number; // Changed from string to number
+}
+
+export interface StreamDetails {
+  payer: string;
+  recipient: string;
+  token: string;
+  totalAmount: string;
+  withdrawn: string;
+  startTime: number;
+  endTime: number;
+  maxWithdrawalsPerDay: number;
+  active: boolean;
 }

@@ -12,7 +12,10 @@ export class AppError extends Error {
 
 export class InsufficientBalanceError extends AppError {
   constructor(requested: string, available: string, token: string) {
-    super(`Insufficient balance. Requested: ${requested}, Available: ${available} for token ${token}`, 400);
+    super(
+      `Insufficient balance. Requested: ${requested}, Available: ${available} for token ${token}`,
+      400
+    );
   }
 }
 
@@ -35,7 +38,7 @@ export class NotFoundError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message = 'Unauthorized') {
+  constructor(message = "Unauthorized") {
     super(message, 401);
   }
 }
@@ -49,5 +52,28 @@ export class ValidationError extends AppError {
 export class BadRequestError extends AppError {
   constructor(message: string) {
     super(message, 400);
+  }
+}
+
+export class BlockchainError extends AppError {
+  constructor(message: string, originalError?: any) {
+    super(`Blockchain error: ${message}`, 500);
+    if (originalError) {
+      this.stack = originalError.stack;
+    }
+  }
+}
+
+export class TransactionFailedError extends BlockchainError {
+  constructor(transactionHash: string) {
+    super(`Transaction failed: ${transactionHash}`);
+  }
+}
+
+export class InsufficientEscrowBalanceError extends BlockchainError {
+  constructor(streamId: string, requested: string, available: string) {
+    super(
+      `Insufficient escrow balance for stream ${streamId}. Requested: ${requested}, Available: ${available}`
+    );
   }
 }
