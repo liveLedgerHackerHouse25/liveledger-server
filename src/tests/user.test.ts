@@ -319,12 +319,12 @@ describe("User API", () => {
       expect(decoded.userId).toBe(testUser.id);
     });
 
-    //   it("should return 401 without authentication", async () => {
-    //     const response = await request(app).post(
-    //       "/api/users/generate-refresh-token"
-    //     );
+    it("should return 401 without authentication", async () => {
+      const response = await request(app).post(
+        "/api/users/generate-refresh-token"
+      );
 
-    //     expect(response.status).toBe(401);
-    //   });
+      expect(response.status).toBe(401);
+    });
   });
 });
