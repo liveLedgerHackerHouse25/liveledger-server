@@ -1,19 +1,88 @@
-import app, { prisma } from "./src/app";
-import { WebSocketService } from "./src/services/websocket.service";
+import app, { prisma } from './src/app';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
+import jwt from 'jsonwebtoken';
+import { RealTimeWorkerService } from './src/services/real-time-worker.service';
 
 const PORT = process.env.PORT || 3000;
 
-// Initialize WebSocket service
-const websocketService = WebSocketService.getInstance();
+// Create HTTP server
+const server = createServer(app);
+
+// Create WebSocket server
+const wss = new WebSocketServer({ 
+  server,
+  path: '/ws'
+});
+
+// Initialize real-time worker service
+const realTimeWorker = new RealTimeWorkerService();
+
+// WebSocket connection handling
+wss.on('connection', (ws, request) => {
+  console.log('New WebSocket connection attempt');
+  
+  // Extract token from query string or headers
+  const url = new URL(request.url!, `http://${request.headers.host}`);
+  const token = url.searchParams.get('token') || request.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    console.log('WebSocket connection rejected: No token provided');
+    ws.close(1008, 'No authentication token provided');
+    return;
+  }
+
+  try {
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    console.log(`WebSocket connection authenticated for user: ${decoded.userId}`);
+    
+    // Register the connection with the real-time worker
+    realTimeWorker.registerWebSocketConnection(decoded.userId, ws);
+    
+    // Send initial connection confirmation
+    ws.send(JSON.stringify({
+      type: 'connection',
+      status: 'connected',
+      userId: decoded.userId,
+      timestamp: new Date().toISOString()
+    }));
+    
+  } catch (error) {
+    console.log('WebSocket connection rejected: Invalid token', error);
+    ws.close(1008, 'Invalid authentication token');
+  }
+});
+
+// Start the real-time worker service and server
+async function startServer() {
+  try {
+    await realTimeWorker.startWorker();
+    
+    // Start the server
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`❤️ Health check: http://localhost:${PORT}/health`);
+      console.log(`🔗 WebSocket endpoint: ws://localhost:${PORT}/ws`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
 // Graceful shutdown handling
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, shutting down gracefully...`);
 
   try {
-    // Stop WebSocket periodic updates
-    websocketService.stopPeriodicUpdates();
-
+    // Stop the real-time worker
+    await realTimeWorker.stopWorker();
+    
+    // Close WebSocket server
+    wss.close();
+    
     await prisma.$disconnect();
     console.log("Database connection closed.");
 
@@ -27,29 +96,7 @@ const gracefulShutdown = async (signal: string) => {
   }
 };
 
-// Start the server
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(
-    `Health check: ${
-      process.env.NODE_ENV === "development"
-        ? `http://localhost:${PORT}/health`
-        : "https://liveledger-server.onrender.com/health"
-    } `
-  );
-  console.log(
-    `Docs: ${
-      process.env.NODE_ENV === "development"
-        ? `http://localhost:${PORT}/api-docs`
-        : "https://liveledger-server.onrender.com/api-docs"
-    } `
-  );
-
-  // Initialize WebSocket server
-  websocketService.initialize(server);
-  console.log(`WebSocket server initialized`);
-});
+startServer();
 
 // Handle graceful shutdown
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

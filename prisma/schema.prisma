@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,47 +8,38 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  walletAddress  String         @unique
-  email          String?
-  name           String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  type           UserType       @default(RECIPIENT) 
-  // Relations
-  payerStreams   Stream[]       @relation("PayerStreams")
-  recipientStreams Stream[]     @relation("RecipientStreams")
-  transactions   Transaction[]
-  balances       Balance[]
+  id               String        @id @default(cuid())
+  walletAddress    String        @unique
+  email            String?
+  name             String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  type             UserType      @default(RECIPIENT)
+  balances         Balance[]
+  payerStreams     Stream[]      @relation("PayerStreams")
+  recipientStreams Stream[]      @relation("RecipientStreams")
+  transactions     Transaction[]
 
   @@index([walletAddress])
 }
 
-enum UserType {
-  PAYER
-  RECIPIENT
-}
-
-
 model Stream {
-  id             String         @id @default(cuid())
-  payerId        String
-  recipientId    String
-  tokenAddress   String
-  flowRate       String         // BigNumber as string (tokens per second)
-  totalAmount    String         // BigNumber as string (maximum total amount)
-  withdrawnAmount String        @default("0") // BigNumber as string
-  status         StreamStatus   @default(ACTIVE)
-  escrowConfirmed Boolean      @default(false)
-  startTime      DateTime       @default(now())
-  endTime        DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  // Relations
-  payer          User           @relation("PayerStreams", fields: [payerId], references: [id], onDelete: Cascade)
-  recipient      User           @relation("RecipientStreams", fields: [recipientId], references: [id], onDelete: Cascade)
-  transactions   Transaction[]
+  id              String        @id @default(cuid())
+  payerId         String
+  recipientId     String
+  tokenAddress    String
+  flowRate        String
+  totalAmount     String
+  withdrawnAmount String        @default("0")
+  status          StreamStatus  @default(ACTIVE)
+  startTime       DateTime      @default(now())
+  endTime         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  escrowConfirmed Boolean       @default(false)
+  payer           User          @relation("PayerStreams", fields: [payerId], references: [id], onDelete: Cascade)
+  recipient       User          @relation("RecipientStreams", fields: [recipientId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
 
   @@index([payerId])
   @@index([recipientId])
@@ -60,20 +48,18 @@ model Stream {
 }
 
 model Transaction {
-  id             String           @id @default(cuid())
-  streamId       String?
-  type           TransactionType
-  amount         String           // BigNumber as string
-  txHash         String?          @unique
-  status         TransactionStatus @default(PENDING)
-  fromAddress    String
-  toAddress      String
-  createdAt      DateTime         @default(now())
-  completedAt    DateTime?
-
-  // Relations
-  stream         Stream?          @relation(fields: [streamId], references: [id], onDelete: Cascade)
-  user           User             @relation(fields: [fromAddress], references: [walletAddress], onDelete: Cascade)
+  id          String            @id @default(cuid())
+  streamId    String?
+  type        TransactionType
+  amount      String
+  txHash      String?           @unique
+  status      TransactionStatus @default(PENDING)
+  fromAddress String
+  toAddress   String
+  createdAt   DateTime          @default(now())
+  completedAt DateTime?
+  user        User              @relation(fields: [fromAddress], references: [walletAddress], onDelete: Cascade)
+  stream      Stream?           @relation(fields: [streamId], references: [id], onDelete: Cascade)
 
   @@index([streamId])
   @@index([txHash])
@@ -82,36 +68,39 @@ model Transaction {
 }
 
 model Balance {
-  id             String         @id @default(cuid())
-  userId         String
-  tokenAddress   String
-  totalEarned    String         @default("0") // BigNumber as string
-  totalWithdrawn String         @default("0") // BigNumber as string
-  availableBalance String       @default("0") // BigNumber as string
-  lastUpdated    DateTime       @updatedAt
-
-  // Relations
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String
+  tokenAddress     String
+  totalEarned      String   @default("0")
+  totalWithdrawn   String   @default("0")
+  availableBalance String   @default("0")
+  lastUpdated      DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tokenAddress])
   @@index([userId])
   @@index([tokenAddress])
 }
 
+enum UserType {
+  PAYER
+  RECIPIENT
+}
+
 enum StreamStatus {
-  PENDING
   ACTIVE
   PAUSED
   STOPPED
   COMPLETED
+  PENDING
 }
 
 enum TransactionType {
-  ESCROW_DEPOSIT
   STREAM_START
   STREAM_STOP
   WITHDRAWAL
   DEPOSIT
+  ESCROW_DEPOSIT
 }
 
 enum TransactionStatus {

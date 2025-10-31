@@ -5,13 +5,11 @@ export type StreamStatus =
   | "STOPPED"
   | "COMPLETED";
 export type TransactionType =
+  | "ESCROW_DEPOSIT"
   | "STREAM_START"
   | "STREAM_STOP"
-  | "STREAM_PAUSE"
-  | "STREAM_RESUME"
   | "WITHDRAWAL"
-  | "DEPOSIT"
-  | "ESCROW_DEPOSIT";
+  | "DEPOSIT";
 
 export interface IStreamCreate {
   recipientAddress: string;
@@ -61,4 +59,51 @@ export interface IEscrowDeposit {
   amount: string;
   transactionHash: string;
   status: "PENDING" | "CONFIRMED" | "FAILED";
+}
+
+// New types for streaming calculation engine
+export interface StreamCalculation {
+  streamId: string;
+  currentBalance: string;
+  claimableAmount: string;
+  totalStreamed: string;
+  withdrawnAmount: string;
+  progress: number; // Percentage 0-100
+  isActive: boolean;
+  ratePerSecond: string;
+  startTime: number; // Unix timestamp
+  endTime: number | null; // Unix timestamp
+  lastCalculated: number; // Unix timestamp
+}
+
+export interface WithdrawalLimits {
+  maxWithdrawalsPerDay: number;
+  withdrawalsUsedToday: number;
+  remainingWithdrawals: number;
+  canWithdraw: boolean;
+  dayIndex: number; // Days since stream start
+  nextWithdrawalTime: number | null; // Unix timestamp when next withdrawal is allowed
+}
+
+export interface StreamUser {
+  id: string;
+  walletAddress: string;
+  name: string | null;
+  email: string | null;
+}
+
+export interface StreamDetails {
+  id: string;
+  onChainStreamId?: number;
+  payer: StreamUser;
+  recipient: StreamUser;
+  tokenAddress: string;
+  totalAmount: string;
+  status: StreamStatus;
+  startTime: number; // Unix timestamp
+  endTime: number | null; // Unix timestamp
+  calculation: StreamCalculation;
+  withdrawalLimits: WithdrawalLimits;
+  createdAt: number; // Unix timestamp
+  updatedAt: number; // Unix timestamp
 }

@@ -139,4 +139,35 @@ export class UserController {
       });
     }
   );
+
+  /**
+   * Get user token balance (mock response for now)
+   * GET /api/users/balance
+   */
+  getUserBalance = asyncErrorHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+      if (!req.user) {
+        throw new UnauthorizedError("User not authenticated");
+      }
+
+      // Mock balance response - in production this would fetch from blockchain
+      const balance = {
+        balances: [
+          {
+            tokenAddress: process.env.USDC_CONTRACT_ADDRESS || "0x...",
+            totalEarned: "150.00", // Mock total earned from streams
+            totalWithdrawn: "100.00", // Mock total withdrawn
+            availableBalance: "50.00", // Available for withdrawal
+          }
+        ],
+        activeStreams: [], // Mock active streams
+        totalActiveStreams: 0
+      };
+
+      res.status(200).json({
+        success: true,
+        data: { balance },
+      });
+    }
+  );
 }

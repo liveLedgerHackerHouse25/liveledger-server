@@ -339,4 +339,54 @@ router.post(
  */
 router.post('/generate-refresh-token', authenticate, userController.generateRefreshToken);
 
+/**
+ * @swagger
+ * /api/users/balance:
+ *   get:
+ *     summary: Get user token balance
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User balance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     balance:
+ *                       type: object
+ *                       properties:
+ *                         totalBalance:
+ *                           type: string
+ *                           description: Total token balance
+ *                         availableBalance:
+ *                           type: string
+ *                           description: Available balance for streaming
+ *                         pendingBalance:
+ *                           type: string
+ *                           description: Balance locked in active streams
+ *                         tokenAddress:
+ *                           type: string
+ *                           description: Token contract address
+ *                         tokenSymbol:
+ *                           type: string
+ *                           description: Token symbol
+ *                         tokenDecimals:
+ *                           type: integer
+ *                           description: Token decimals
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/balance', authenticate, userController.getUserBalance);
+
 export default router;
