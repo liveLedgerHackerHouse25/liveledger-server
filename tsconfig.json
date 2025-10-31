@@ -16,7 +16,7 @@
     //   "@config/*": ["config/*"],
     //   "@tests/*": ["../tests/*"]
     // },
-    "types": ["jest", "node"]
+    "types": ["node"]
     // "emitDecoratorMetadata": true,
     // "experimentalDecorators": true
   },
