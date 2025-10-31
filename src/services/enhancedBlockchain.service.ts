@@ -35,7 +35,10 @@ export class EnhancedBlockchainService {
 
   constructor() {
     // Use environment variable for RPC URL
-    const rpcUrl = process.env.ARBITRUM_RPC_URL || process.env.ETHEREUM_RPC_URL;
+    const rpcUrl = 
+    process.env.ARBITRUM_RPC_URL ||
+    process.env.ARBITRUM_SEPOLIA_RPC_URL ||
+    process.env.ETHEREUM_RPC_URL;
     if (!rpcUrl) {
       throw new Error(
         "ARBITRUM_RPC_URL or ETHEREUM_RPC_URL environment variable is required"
