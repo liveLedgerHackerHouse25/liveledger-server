@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "build:render": "npm install && npx prisma generate && tsc",
-    "start": "ts-node src/app.ts",
+    "start": "ts-node src/server.ts",
     "dev": "nodemon --exec ts-node server.ts",
     "test": "jest",
     "test:watch": "jest --watch",
