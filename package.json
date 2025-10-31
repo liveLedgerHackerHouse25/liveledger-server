@@ -8,6 +8,7 @@
   "main": "app.ts",
   "scripts": {
     "build": "tsc",
+    "build:render": "npm install && npx prisma generate && tsc",
     "start": "ts-node src/app.ts",
     "dev": "nodemon --exec ts-node server.ts",
     "test": "jest",
