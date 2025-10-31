@@ -55,6 +55,14 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.json({
+    message: "Backend API is running",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/streams", streamRoutes);
