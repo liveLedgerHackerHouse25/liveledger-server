@@ -8,7 +8,7 @@
   "main": "server.ts",
   "scripts": {
     "build": "tsc",
-    "build:render": "npm install && npm install @types/jest @types/node && npx prisma generate && tsc",
+    "build:render": "npm install && npx prisma generate && tsc",
     "start": "ts-node server.ts",
     "dev": "nodemon --exec ts-node server.ts",
     "test": "jest",
