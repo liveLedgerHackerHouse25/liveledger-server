@@ -5,7 +5,7 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "app.ts",
+  "main": "server.ts",
   "scripts": {
     "build": "tsc",
     "build:render": "npm install && npx prisma generate && tsc",
