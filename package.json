@@ -41,9 +41,7 @@
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
-    "@types/jest": "^29.5.14"
-  },
-  "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@jest/globals": "^29.7.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
@@ -55,7 +53,9 @@
     "@types/nodemailer": "^7.0.1",
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
+    "@types/swagger-ui-express": "^4.1.8"
+  },
+  "devDependencies": {
     "jest": "^29.7.0",
     "jest-extended": "^5.0.3",
     "nodemon": "^3.1.10",
