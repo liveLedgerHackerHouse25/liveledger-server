@@ -1,6 +1,5 @@
 // services/mockBlockchain.service.ts
 
-import { string } from "zod";
 import { prisma } from "../utils/database";
 
 export interface MockPreparedTransaction {
@@ -54,7 +53,10 @@ export class MockBlockchainService {
    * Get claimable amount for a stream (simulates on-chain view function)
    */
   async getClaimableAmount(streamId: string): Promise<string> {
-    console.log("MockBlockchainService.getClaimableAmount:", { streamId, streamDataKeys: Array.from(this.streamData.keys()) });
+    console.log("MockBlockchainService.getClaimableAmount:", {
+      streamId,
+      streamDataKeys: Array.from(this.streamData.keys()),
+    });
 
     const stream = this.streamData.get(streamId);
     console.log("Stream data found:", !!stream);
@@ -68,7 +70,14 @@ export class MockBlockchainService {
     const startTime = stream.startTime;
     const endTime = stream.endTime;
 
-    console.log("Calculation params:", { now, startTime, endTime, totalAmount: stream.totalAmount, duration: stream.duration, withdrawn: stream.withdrawn });
+    console.log("Calculation params:", {
+      now,
+      startTime,
+      endTime,
+      totalAmount: stream.totalAmount,
+      duration: stream.duration,
+      withdrawn: stream.withdrawn,
+    });
 
     if (now < startTime) return "0";
 
@@ -90,7 +99,11 @@ export class MockBlockchainService {
     streamId: string,
     recipient: string
   ): Promise<{ success: boolean; amount: string }> {
-    console.log("MockBlockchainService.withdraw:", { streamId, recipient, confirmedStreams: Array.from(this.confirmedStreams) });
+    console.log("MockBlockchainService.withdraw:", {
+      streamId,
+      recipient,
+      confirmedStreams: Array.from(this.confirmedStreams),
+    });
 
     if (!this.confirmedStreams.has(streamId)) {
       console.log("Stream not confirmed:", streamId);
@@ -174,7 +187,9 @@ export class MockBlockchainService {
     }
 
     // Calculate rate per second from total amount and duration
-    const durationSeconds = Math.floor((stream.endTime!.getTime() - stream.startTime.getTime()) / 1000);
+    const durationSeconds = Math.floor(
+      (stream.endTime!.getTime() - stream.startTime.getTime()) / 1000
+    );
     const totalAmountWei = BigInt(stream.totalAmount);
     const ratePerSecond = totalAmountWei / BigInt(durationSeconds);
 

@@ -34,14 +34,14 @@ const server = app.listen(PORT, () => {
   console.log(
     `Health check: ${
       process.env.NODE_ENV === "development"
-        ? "http://localhost:${PORT}/health"
+        ? `http://localhost:${PORT}/health`
         : "https://liveledger-server.onrender.com/health"
     } `
   );
   console.log(
     `Docs: ${
       process.env.NODE_ENV === "development"
-        ? "http://localhost:${PORT}/api-docs"
+        ? `http://localhost:${PORT}/api-docs`
         : "https://liveledger-server.onrender.com/api-docs"
     } `
   );
