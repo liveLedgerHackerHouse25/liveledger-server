@@ -1,8 +1,11 @@
-import { Router } from 'express';
-import { AuthController } from '../controllers/auth.controller';
-import { AuthValidators } from '../validators/auth.validators';
-import { validateRequest, validateBodyNotEmpty } from '../middleware/validation.middleware';
-import { authenticate } from '../middleware/auth.middleware';
+import { Router } from "express";
+import { AuthController } from "../controllers/auth.controller";
+import { AuthValidators } from "../validators/auth.validators";
+import {
+  validateRequest,
+  validateBodyNotEmpty,
+} from "../middleware/validation.middleware";
+import { authenticate } from "../middleware/auth.middleware";
 
 const router = Router();
 const authController = new AuthController();
@@ -54,7 +57,7 @@ const authController = new AuthController();
  *         description: Server error
  */
 router.post(
-  '/nonce',
+  "/nonce",
   validateBodyNotEmpty,
   validateRequest(AuthValidators.validateNonceRequest),
   authController.generateNonce
@@ -132,7 +135,7 @@ router.post(
  *         description: Server error
  */
 router.post(
-  '/wallet',
+  "/wallet",
   validateBodyNotEmpty,
   validateRequest(AuthValidators.validateWalletAuth),
   authController.authenticateWallet
@@ -173,11 +176,14 @@ router.post(
  *                         name:
  *                           type: string
  *                           nullable: true
+ *                         type:
+ *                           type: UserType
+ *                           nullable: true
  *       401:
  *         description: Unauthorized
  *       500:
  *         description: Server error
  */
-router.get('/me', authenticate, authController.getCurrentUser);
+router.get("/me", authenticate, authController.getCurrentUser);
 
 export default router;

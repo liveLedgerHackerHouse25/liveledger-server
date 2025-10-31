@@ -14,8 +14,9 @@ export const prisma = new PrismaClient();
 
 // Import routes
 import authRoutes from "./routes/auth.routes";
-// import streamRoutes from './routes/stream.routes';
+import streamRoutes from "./routes/stream.routes";
 import userRoutes from "./routes/user.routes";
+import dashboardRoutes from "./routes/dashboard.routes";
 
 // Import middleware
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
@@ -56,8 +57,9 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
-// app.use("/api/streams", streamRoutes);
+app.use("/api/streams", streamRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Error handling middleware
 app.use(notFoundHandler);

@@ -1,12 +1,19 @@
 import app, { prisma } from './src/app';
+import { WebSocketService } from './src/services/websocket.service';
 
 const PORT = process.env.PORT || 3000;
+
+// Initialize WebSocket service
+const websocketService = WebSocketService.getInstance();
 
 // Graceful shutdown handling
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, shutting down gracefully...`);
 
   try {
+    // Stop WebSocket periodic updates
+    websocketService.stopPeriodicUpdates();
+
     await prisma.$disconnect();
     console.log('Database connection closed.');
 
@@ -22,9 +29,13 @@ const gracefulShutdown = async (signal: string) => {
 
 // Start the server
 const server = app.listen(PORT, () => {
-  console.log(`=€ Server running on port ${PORT}`);
-  console.log(`=Ý Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`=ï¿½ Server running on port ${PORT}`);
+  console.log(`=ï¿½ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`=' Health check: http://localhost:${PORT}/health`);
+
+  // Initialize WebSocket server
+  websocketService.initialize(server);
+  console.log(`=ï¿½ WebSocket server initialized`);
 });
 
 // Handle graceful shutdown

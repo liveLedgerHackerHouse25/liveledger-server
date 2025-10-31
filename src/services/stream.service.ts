@@ -1,444 +1,321 @@
-// import { prisma } from "../utils/database";
+// services/stream.service.ts
+import { prisma } from "../utils/database";
+import {
+  MockBlockchainService,
+  MockPreparedTransaction,
+} from "./mockBlockchain.service";
+import { IStreamCreate, IWithdrawalRequest } from "../types/stream.types";
 // import {
-//   IStream,
-//   IStreamCreate,
-//   IStreamUpdate,
-//   IStreamWithBalance,
-//   IWithdrawalRequest,
-// } from "../types/stream.types";
-// import {
-//   ConflictError,
 //   NotFoundError,
 //   BadRequestError,
-//   InsufficientBalanceError,
+//   DatabaseError,
 // } from "../errors/genericErrors";
-// import { TransactionType } from "../types/stream.types";
+import { NotFoundError, BadRequestError } from "../errors/genericErrors";
+import { PreparedTransaction } from "../types/blockchain.types";
+import {
+  Stream,
+  StreamStatus,
+  TransactionStatus,
+  TransactionType,
+} from "@prisma/client";
 
-// export class StreamService {
-//   /**
-//    * Create a new payment stream
-//    */
-// async createStream(
-//   payerId: string,
-//   request: CreateStreamRequest
-// ): Promise<{ stream: Stream; transaction: PreparedTransaction }> {
-//   try {
-//     // 1. Validate payer exists (your existing code)
-//     const payer = await prisma.user.findUnique({ where: { id: payerId } });
-//     if (!payer) throw new NotFoundError("User not found");
+interface CreateStreamRequest {
+  recipientAddress: string;
+  tokenAddress: string;
+  flowRate: string;
+  totalAmount: string;
+  duration?: number;
+}
 
-//     // 2. Validate/find recipient (your existing code)
-//     let recipient = await prisma.user.findUnique({
-//       where: { walletAddress: request.recipientAddress.toLowerCase() },
-//     });
-//     if (!recipient) {
-//       recipient = await prisma.user.create({
-//         data: { walletAddress: request.recipientAddress.toLowerCase() },
-//       });
-//     }
+export class StreamService {
+  private blockchainService: MockBlockchainService;
 
-//     // 3. Create stream with PENDING status
-//     const stream = await prisma.stream.create({
-//       data: {
-//         payerId,
-//         recipientId: recipient.id,
-//         tokenAddress: request.tokenAddress.toLowerCase(),
-//         flowRate: request.flowRate,
-//         totalAmount: request.totalAmount,
-//         withdrawnAmount: "0",
-//         status: StreamStatus.PENDING, // NOT ACTIVE
-//         startTime: new Date(),
-//         escrowConfirmed: false, // Funds not secured yet
-//       },
-//     });
+  constructor() {
+    this.blockchainService = new MockBlockchainService();
+  }
 
-//     // 4. Prepare escrow deposit transaction (NOT execute)
-//     const escrowTx = await this.blockchainService.prepareEscrowDeposit(
-//       payer.walletAddress,
-//       request.totalAmount,
-//       stream.id,
-//       request.tokenAddress
-//     );
+  /**
+   * Create a new payment stream
+   */
+  async createStream(
+    payerId: string,
+    request: CreateStreamRequest
+  ): Promise<{ stream: Stream; transaction: MockPreparedTransaction }> {
+    try {
+      // 1. Validate payer exists
+      const payer = await prisma.user.findUnique({ where: { id: payerId } });
+      if (!payer) throw new NotFoundError("User not found");
 
-//     // 5. Create pending transaction record
-//     await prisma.transaction.create({
-//       data: {
-//         type: TransactionTypes.DEPOSIT,
-//         amount: request.totalAmount,
-//         status: TransactionStatus.PENDING,
-//         fromAddress: payer.walletAddress,
-//         toAddress: process.env.ESCROW_CONTRACT_ADDRESS!,
-//         streamId: stream.id,
-//       },
-//     });
+      // 2. Validate/find recipient
+      let recipient = await prisma.user.findUnique({
+        where: { walletAddress: request.recipientAddress.toLowerCase() },
+      });
+      if (!recipient) {
+        recipient = await prisma.user.create({
+          data: { walletAddress: request.recipientAddress.toLowerCase() },
+        });
+      }
 
-//     return {
-//       stream,
-//       transaction: escrowTx, // Frontend will handle signing
-//     };
+      // 3. Create stream with PENDING status
+      const stream = await prisma.stream.create({
+        data: {
+          payerId,
+          recipientId: recipient.id,
+          tokenAddress: request.tokenAddress.toLowerCase(),
+          flowRate: request.flowRate,
+          totalAmount: request.totalAmount,
+          withdrawnAmount: "0",
+          status: StreamStatus.PENDING,
+          startTime: new Date(),
+          escrowConfirmed: false,
+        },
+      });
 
-//   } catch (error) {
-//     if (error instanceof AppError) throw error;
-//     throw new DatabaseError('Failed to create stream', error);
-//   }
-// }
+      // 4. Prepare escrow deposit transaction using mock service
+      const escrowTx = await this.blockchainService.prepareEscrowDeposit(
+        payer.walletAddress,
+        request.totalAmount,
+        stream.id,
+        request.tokenAddress
+      );
 
-//   // /**
-//   //  * Get stream by ID
-//   //  */
-//   // async getStreamById(streamId: string, userId?: string): Promise<IStreamWithBalance> {
-//   //   const stream = await prisma.stream.findUnique({
-//   //     where: { id: streamId },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
+      // 5. Create pending transaction record
+      await prisma.transaction.create({
+        data: {
+          type: TransactionType.DEPOSIT,
+          amount: request.totalAmount,
+          status: TransactionStatus.PENDING,
+          fromAddress: payer.walletAddress,
+          toAddress: process.env.ESCROW_CONTRACT_ADDRESS!,
+          streamId: stream.id,
+        },
+      });
 
-//   //   if (!stream) {
-//   //     throw new NotFoundError(`Stream not found: ${streamId}`);
-//   //   }
+      return {
+        stream,
+        transaction: escrowTx, // Frontend will handle signing
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof BadRequestError)
+        throw error;
+      throw new BadRequestError("Failed to create stream");
+    }
+  }
 
-//   //   // If userId is provided, check if user has access to this stream
-//   //   if (userId && stream.payerId !== userId && stream.recipientId !== userId) {
-//   //     throw new BadRequestError("You don't have access to this stream");
-//   //   }
+  // /**
+  //  * Confirm stream creation after transaction is signed
+  //  */
+  async confirmStreamCreation(streamId: string): Promise<Stream> {
+    try {
+      // Simulate blockchain confirmation
+      await this.blockchainService.confirmTransaction(streamId);
 
-//   //   const currentBalance = this.calculateCurrentBalance(stream);
-//   //   const availableBalance = this.calculateAvailableBalance(stream, currentBalance);
+      // Update stream status in database
+      const updatedStream = await prisma.stream.update({
+        where: { id: streamId },
+        data: {
+          status: StreamStatus.ACTIVE,
+          escrowConfirmed: true,
+        },
+      });
 
-//   //   return {
-//   //     ...this.mapPrismaStreamToIStream(stream),
-//   //     currentBalance,
-//   //     availableBalance
-//   //   };
-//   // }
+      // Update transaction status
+      await prisma.transaction.updateMany({
+        where: {
+          streamId,
+          type: TransactionType.DEPOSIT,
+          status: TransactionStatus.PENDING,
+        },
+        data: { status: TransactionStatus.CONFIRMED },
+      });
 
-//   // /**
-//   //  * Get streams for a user (as payer or recipient)
-//   //  */
-//   // async getUserStreams(userId: string, status?: string, page: number = 1, limit: number = 10): Promise<{
-//   //   streams: IStreamWithBalance[];
-//   //   total: number;
-//   //   page: number;
-//   //   totalPages: number;
-//   // }> {
-//   //   const where: any = {
-//   //     OR: [
-//   //       { payerId: userId },
-//   //       { recipientId: userId }
-//   //     ]
-//   //   };
+      return updatedStream;
+    } catch (error) {
+      throw new BadRequestError("Failed to confirm stream creation");
+    }
+  }
 
-//   //   if (status) {
-//   //     where.status = status;
-//   //   }
+  /**
+   * Withdraw from an active stream
+   */
+  async withdrawFromStream(
+    streamId: string,
+    recipientId: string
+  ): Promise<{ amount: string }> {
+    try {
+      const stream = await prisma.stream.findUnique({
+        where: { id: streamId },
+        include: { recipient: true },
+      });
 
-//   //   const skip = (page - 1) * limit;
+      if (!stream || stream.recipientId !== recipientId) {
+        throw new NotFoundError("Stream not found or access denied");
+      }
 
-//   //   const [streams, total] = await Promise.all([
-//   //     prisma.stream.findMany({
-//   //       where,
-//   //       include: {
-//   //         payer: true,
-//   //         recipient: true
-//   //       },
-//   //       orderBy: { createdAt: 'desc' },
-//   //       skip,
-//   //       take: limit
-//   //     }),
-//   //     prisma.stream.count({ where })
-//   //   ]);
+      if (stream.status !== StreamStatus.ACTIVE) {
+        throw new BadRequestError("Stream is not active");
+      }
 
-//   //   const streamsWithBalance = streams.map(stream => {
-//   //     const currentBalance = this.calculateCurrentBalance(stream);
-//   //     const availableBalance = this.calculateAvailableBalance(stream, currentBalance);
+      console.log("Withdrawal attempt:", {
+        streamId,
+        recipientId,
+        streamRecipientId: stream?.recipientId,
+        streamExists: !!stream,
+      });
 
-//   //     return {
-//   //       ...this.mapPrismaStreamToIStream(stream),
-//   //       currentBalance,
-//   //       availableBalance
-//   //     };
-//   //   });
+      if (!stream || stream.recipientId !== recipientId) {
+        console.log("Access denied - stream:", {
+          streamRecipientId: stream?.recipientId,
+          providedRecipientId: recipientId,
+          match: stream?.recipientId === recipientId,
+        });
+        throw new NotFoundError("Stream not found or access denied");
+      }
 
-//   //   return {
-//   //     streams: streamsWithBalance,
-//   //     total,
-//   //     page,
-//   //     totalPages: Math.ceil(total / limit)
-//   //   };
-//   // }
+      // Use mock blockchain service to perform withdrawal
+      const result = await this.blockchainService.withdraw(
+        streamId,
+        stream.recipient.walletAddress
+      );
 
-//   // /**
-//   //  * Update stream status
-//   //  */
-//   // async updateStreamStatus(streamId: string, userId: string, updateData: IStreamUpdate): Promise<IStream> {
-//   //   const stream = await prisma.stream.findUnique({
-//   //     where: { id: streamId },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
+      if (!result.success) {
+        throw new BadRequestError("Withdrawal failed or no funds available");
+      }
 
-//   //   if (!stream) {
-//   //     throw new NotFoundError(`Stream not found: ${streamId}`);
-//   //   }
+      // Update database with withdrawn amount
+      const newWithdrawnAmount = (
+        BigInt(stream.withdrawnAmount) + BigInt(result.amount)
+      ).toString();
 
-//   //   // Only payer can update stream status
-//   //   if (stream.payerId !== userId) {
-//   //     throw new BadRequestError("Only the payer can update stream status");
-//   //   }
+      await prisma.stream.update({
+        where: { id: streamId },
+        data: { withdrawnAmount: newWithdrawnAmount },
+      });
 
-//   //   // Validate status transitions
-//   //   this.validateStatusTransition(stream.status, updateData.status!);
+      // Record withdrawal transaction
+      await prisma.transaction.create({
+        data: {
+          type: TransactionType.WITHDRAWAL,
+          amount: result.amount,
+          status: TransactionStatus.CONFIRMED,
+          fromAddress: process.env.ESCROW_CONTRACT_ADDRESS!,
+          toAddress: stream.recipient.walletAddress,
+          streamId: stream.id,
+        },
+      });
 
-//   //   const updatedStream = await prisma.stream.update({
-//   //     where: { id: streamId },
-//   //     data: {
-//   //       status: updateData.status,
-//   //       endTime: updateData.status === "STOPPED" || updateData.status === "COMPLETED" ? new Date() : undefined
-//   //     },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
+      return { amount: result.amount };
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof BadRequestError)
+        throw error;
+      throw new BadRequestError("Failed to withdraw from stream");
+    }
+  }
 
-//   //   // Create transaction record for status change
-//   //   const transactionType = this.getTransactionTypeForStatus(updateData.status!);
-//   //   if (transactionType) {
-//   //     await prisma.transaction.create({
-//   //       data: {
-//   //         streamId: stream.id,
-//   //         type: transactionType,
-//   //         amount: "0",
-//   //         status: "CONFIRMED",
-//   //         fromAddress: stream.payer.walletAddress,
-//   //         toAddress: stream.recipient.walletAddress,
-//   //         tokenAddress: stream.tokenAddress
-//   //       }
-//   //     });
-//   //   }
+  /**
+   * Get claimable amount for a stream
+   */
+  async getClaimableAmount(streamId: string): Promise<string> {
+    try {
+      const stream = await prisma.stream.findUnique({
+        where: { id: streamId },
+      });
 
-//   //   return this.mapPrismaStreamToIStream(updatedStream);
-//   // }
+      if (!stream) {
+        throw new NotFoundError("Stream not found");
+      }
 
-//   // /**
-//   //  * Process withdrawal request
-//   //  */
-//   // async processWithdrawal(userId: string, withdrawalRequest: IWithdrawalRequest): Promise<any> {
-//   //   const { streamId, amount } = withdrawalRequest;
+      if (stream.status !== StreamStatus.ACTIVE) {
+        return "0";
+      }
 
-//   //   const stream = await prisma.stream.findUnique({
-//   //     where: { id: streamId },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
+      return await this.blockchainService.getClaimableAmount(streamId);
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new BadRequestError("Failed to get claimable amount");
+    }
+  }
 
-//   //   if (!stream) {
-//   //     throw new NotFoundError(`Stream not found: ${streamId}`);
-//   //   }
+  /**
+   * Cancel a stream and process refund
+   */
+  async cancelStream(
+    streamId: string,
+    payerId: string
+  ): Promise<{ refundAmount: string }> {
+    try {
+      const stream = await prisma.stream.findUnique({
+        where: { id: streamId },
+        include: { payer: true },
+      });
 
-//   //   // Only recipient can withdraw
-//   //   if (stream.recipientId !== userId) {
-//   //     throw new BadRequestError("Only the recipient can withdraw from this stream");
-//   //   }
+      if (!stream || stream.payerId !== payerId) {
+        throw new NotFoundError("Stream not found or access denied");
+      }
 
-//   //   // Check stream status
-//   //   if (stream.status !== "ACTIVE" && stream.status !== "PAUSED") {
-//   //     throw new BadRequestError("Can only withdraw from active or paused streams");
-//   //   }
+      const result = await this.blockchainService.cancelStream(
+        streamId,
+        stream.payer.walletAddress
+      );
 
-//   //   // Calculate current balance
-//   //   const currentBalance = this.calculateCurrentBalance(stream);
-//   //   const availableBalance = this.calculateAvailableBalance(stream, currentBalance);
+      if (!result.success) {
+        throw new BadRequestError("Failed to cancel stream");
+      }
 
-//   //   // Check if withdrawal amount is valid
-//   //   const withdrawalAmount = parseFloat(amount);
-//   //   const availableAmount = parseFloat(availableBalance);
+      // Update stream status
+      await prisma.stream.update({
+        where: { id: streamId },
+        data: { status: StreamStatus.STOPPED },
+      });
 
-//   //   if (withdrawalAmount > availableAmount) {
-//   //     throw new InsufficientBalanceError(amount, availableBalance, stream.tokenAddress);
-//   //   }
+      // Record refund transaction if any
+      // if (result.refundAmount !== "0") {
+      //   await prisma.transaction.create({
+      //     data: {
+      //       type: TransactionType.,
+      //       amount: result.refundAmount,
+      //       status: TransactionStatus.CONFIRMED,
+      //       fromAddress: process.env.ESCROW_CONTRACT_ADDRESS!,
+      //       toAddress: stream.payer.walletAddress,
+      //       streamId: stream.id,
+      //     },
+      //   });
+      // }
 
-//   //   // Create withdrawal transaction
-//   //   const transaction = await prisma.transaction.create({
-//   //     data: {
-//   //       streamId: stream.id,
-//   //       type: "WITHDRAWAL" as TransactionType,
-//   //       amount,
-//   //       status: "PENDING",
-//   //       fromAddress: stream.payer.walletAddress,
-//   //       toAddress: stream.recipient.walletAddress,
-//   //       tokenAddress: stream.tokenAddress
-//   //     }
-//   //   });
+      return { refundAmount: result.refundAmount };
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof BadRequestError)
+        throw error;
+      throw new BadRequestError("Failed to cancel stream");
+    }
+  }
 
-//   //   // Update withdrawn amount
-//   //   const newWithdrawnAmount = (parseFloat(stream.withdrawnAmount) + withdrawalAmount).toString();
-//   //   await prisma.stream.update({
-//   //     where: { id: streamId },
-//   //     data: {
-//   //       withdrawnAmount: newWithdrawnAmount
-//   //     }
-//   //   });
+  async getStream(streamId: string, userId: string): Promise<Stream> {
+    const stream = await prisma.stream.findUnique({
+      where: { id: streamId },
+      include: { payer: true, recipient: true },
+    });
 
-//   //   return transaction;
-//   // }
+    if (
+      !stream ||
+      (stream.payerId !== userId && stream.recipientId !== userId)
+    ) {
+      throw new NotFoundError("Stream not found");
+    }
 
-//   // /**
-//   //  * Confirm escrow deposit
-//   //  */
-//   // async confirmEscrowDeposit(streamId: string, transactionHash: string): Promise<IStream> {
-//   //   const stream = await prisma.stream.findUnique({
-//   //     where: { id: streamId },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
+    return stream;
+  }
 
-//   //   if (!stream) {
-//   //     throw new NotFoundError(`Stream not found: ${streamId}`);
-//   //   }
-
-//   //   // Update stream status to ACTIVE
-//   //   const updatedStream = await prisma.stream.update({
-//   //     where: { id: streamId },
-//   //     data: {
-//   //       status: "ACTIVE",
-//   //       escrowConfirmed: true,
-//   //       startTime: new Date()
-//   //     },
-//   //     include: {
-//   //       payer: true,
-//   //       recipient: true
-//   //     }
-//   //   });
-
-//   //   // Update escrow transaction
-//   //   await prisma.transaction.updateMany({
-//   //     where: {
-//   //       streamId: streamId,
-//   //       type: "ESCROW_DEPOSIT"
-//   //     },
-//   //     data: {
-//   //       status: "CONFIRMED",
-//   //       transactionHash
-//   //     }
-//   //   });
-
-//   //   // Create stream start transaction
-//   //   await prisma.transaction.create({
-//   //     data: {
-//   //       streamId: stream.id,
-//   //       type: "STREAM_START" as TransactionType,
-//   //       amount: "0",
-//   //       status: "CONFIRMED",
-//   //       transactionHash,
-//   //       fromAddress: stream.payer.walletAddress,
-//   //       toAddress: stream.recipient.walletAddress,
-//   //       tokenAddress: stream.tokenAddress
-//   //     }
-//   //   });
-
-//   //   return this.mapPrismaStreamToIStream(updatedStream);
-//   // }
-
-//   // /**
-//   //  * Calculate current balance based on flow rate and elapsed time
-//   //  */
-//   // private calculateCurrentBalance(stream: any): string {
-//   //   if (stream.status === "PENDING") {
-//   //     return "0";
-//   //   }
-
-//   //   const now = new Date();
-//   //   const startTime = new Date(stream.startTime || stream.createdAt);
-//   //   const endTime = stream.endTime && (stream.status === "STOPPED" || stream.status === "COMPLETED")
-//   //     ? new Date(stream.endTime)
-//   //     : now;
-
-//   //   // Calculate elapsed seconds
-//   //   const elapsedSeconds = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
-
-//   //   // Calculate balance: flowRate * elapsedSeconds
-//   //   const flowRate = parseFloat(stream.flowRate);
-//   //   const balance = flowRate * elapsedSeconds;
-
-//   //   return balance.toFixed(6);
-//   // }
-
-//   // /**
-//   //  * Calculate available balance (current balance - withdrawn amount)
-//   //  */
-//   // private calculateAvailableBalance(stream: any, currentBalance: string): string {
-//   //   const balance = parseFloat(currentBalance);
-//   //   const withdrawn = parseFloat(stream.withdrawnAmount);
-//   //   const totalAmount = parseFloat(stream.totalAmount);
-
-//   //   // Available balance is the minimum of:
-//   //   // 1. Current balance minus withdrawn amount
-//   //   // 2. Total escrow amount minus withdrawn amount
-//   //   const availableFromBalance = balance - withdrawn;
-//   //   const availableFromEscrow = totalAmount - withdrawn;
-
-//   //   return Math.min(availableFromBalance, availableFromEscrow).toFixed(6);
-//   // }
-
-//   // /**
-//   //  * Validate stream status transitions
-//   //  */
-//   // private validateStatusTransition(currentStatus: string, newStatus: string): void {
-//   //   const validTransitions: { [key: string]: string[] } = {
-//   //     "PENDING": ["ACTIVE", "STOPPED"],
-//   //     "ACTIVE": ["PAUSED", "STOPPED"],
-//   //     "PAUSED": ["ACTIVE", "STOPPED"],
-//   //     "STOPPED": [],
-//   //     "COMPLETED": []
-//   //   };
-
-//   //   const allowedTransitions = validTransitions[currentStatus] || [];
-//   //   if (!allowedTransitions.includes(newStatus)) {
-//   //     throw new BadRequestError(`Cannot transition from ${currentStatus} to ${newStatus}`);
-//   //   }
-//   // }
-
-//   // /**
-//   //  * Get transaction type for status change
-//   //  */
-//   // private getTransactionTypeForStatus(status: string): string | null {
-//   //   const statusToTransactionType: { [key: string]: string } = {
-//   //     "ACTIVE": "STREAM_START",
-//   //     "PAUSED": "STREAM_PAUSE",
-//   //     "STOPPED": "STREAM_STOP"
-//   //   };
-
-//   //   return statusToTransactionType[status] || null;
-//   // }
-
-//   // /**
-//   //  * Map Prisma stream to IStream interface
-//   //  */
-//   // private mapPrismaStreamToIStream(prismaStream: any): IStream {
-//   //   return {
-//   //     id: prismaStream.id,
-//   //     payerId: prismaStream.payerId,
-//   //     recipientId: prismaStream.recipientId,
-//   //     recipientAddress: prismaStream.recipient.walletAddress,
-//   //     tokenAddress: prismaStream.tokenAddress,
-//   //     flowRate: prismaStream.flowRate,
-//   //     totalAmount: prismaStream.totalAmount,
-//   //     status: prismaStream.status,
-//   //     withdrawnAmount: prismaStream.withdrawnAmount,
-//   //     startTime: prismaStream.startTime,
-//   //     endTime: prismaStream.endTime,
-//   //     escrowConfirmed: prismaStream.escrowConfirmed,
-//   //     createdAt: prismaStream.createdAt,
-//   //     updatedAt: prismaStream.updatedAt
-//   //   };
-//   // }
-// }
+  async getUserStreams(userId: string): Promise<Stream[]> {
+    return await prisma.stream.findMany({
+      where: {
+        OR: [{ payerId: userId }, { recipientId: userId }],
+      },
+      include: {
+        payer: { select: { id: true, name: true, walletAddress: true } },
+        recipient: { select: { id: true, name: true, walletAddress: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+}
